@@ -1,0 +1,7 @@
+[workspace]
+members = ["server", "test-client"]
+default-members = ["server", "test-client"]
+resolver = "2"
+
+[profile.release]
+opt-level = 3

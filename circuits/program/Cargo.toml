@@ -1,0 +1,13 @@
+[package]
+version = "0.1.0"
+name = "age-proof-program"
+edition = "2021"
+
+[dependencies]
+sp1-zkvm = "5.0.8"
+serde = { version = "1.0", features = ["derive"] }
+# For certificate and CMS parsing
+der = "0.7"
+x509-parser = "0.16"
+sha2 = "0.10"
+base64 = "0.22"

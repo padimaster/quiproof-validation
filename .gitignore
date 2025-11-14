@@ -1,0 +1,31 @@
+# Rust build artifacts
+**/target/
+target/
+
+# Cargo lock files (keep root one, ignore nested ones in subdirectories)
+# Keep: Cargo.lock (root)
+# Ignore: tools/Cargo.lock, circuits/Cargo.lock
+
+# MacOS
+.DS_Store
+**/.DS_Store
+
+# Proof files
+**/proof-with-pis.json
+**/proof-with-io.json
+
+# Environment files
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.log
+
