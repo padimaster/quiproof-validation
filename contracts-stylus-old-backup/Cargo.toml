@@ -1,0 +1,21 @@
+[package]
+name = "age-verification-stylus"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+stylus-sdk = "0.9"
+hex = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+
+[profile.release]
+opt-level = "z"     # Optimize for size
+lto = true          # Enable link-time optimization
+codegen-units = 1   # Better optimization
+panic = "abort"     # Smaller binary
+

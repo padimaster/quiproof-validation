@@ -1,0 +1,23 @@
+[package]
+name = "age-verification-stylus"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+keywords = ["arbitrum", "ethereum", "stylus", "zk-proof", "age-verification"]
+description = "Age Verification Smart Contract for Arbitrum Stylus"
+
+[workspace]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+stylus-sdk = "0.6"
+hex = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+
+[profile.release]
+opt-level = "z"     # Optimize for size
+lto = true          # Enable link-time optimization
+codegen-units = 1   # Better optimization
+panic = "abort"     # Smaller binary

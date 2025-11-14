@@ -7,5 +7,5 @@
     11,
     13
   ],
-  "trusted_csca_certs_file": "trusted_csca_certs_invalid_ecuador.json"
+  "trusted_csca_certs_file": "trusted_csca_certs_ecuador.json"
 }

@@ -211,7 +211,10 @@ async fn generate_proof(
     stdin.write(&input);
 
     // Generate proof based on system
-    // Default to groth16 for EVM compatibility (Core proofs can't be used onchain)
+    // Default to "groth16" - fastest verification (~200K gas) and smallest proof size (~2KB)
+    // This is the optimal choice for on-chain verification (Stylus/Solidity)
+    // Note: Requires Docker to be running for proof generation
+    // Alternatives: "plonk" (slightly larger) or "core" (off-chain only, no Docker)
     let proof_system = request.proof_system.as_deref().unwrap_or("groth16");
     
     // Create prover client for this request
@@ -222,42 +225,80 @@ async fn generate_proof(
     
     let (proof, proof_bytes, cycles) = match proof_system {
         "groth16" => {
-            let proof = client
+            // Groth16: Fastest verification (~200K gas) and smallest proof size (~2KB)
+            // Optimal for on-chain verification (Stylus/Solidity)
+            let proof = match client
                 .prove(&pk, &stdin)
                 .groth16()
                 .run()
-                .map_err(|e| {
-                    eprintln!("Proof generation error: {:?}", e);
-                    StatusCode::INTERNAL_SERVER_ERROR
-                })?;
+            {
+                Ok(p) => p,
+                Err(e) => {
+                    let error_msg = format!(
+                        "Groth16 proof generation failed: {:?}. \
+                        Note: Groth16 requires Docker to be running. \
+                        For local testing without Docker, use 'proof_system: \"core\"' (off-chain only).",
+                        e
+                    );
+                    eprintln!("{}", error_msg);
+                    return Ok(Json(ProofResponse {
+                        success: false,
+                        proof: None,
+                        error: Some(error_msg),
+                    }));
+                }
+            };
             // Groth16 proofs support .bytes() for onchain verification
             let bytes = proof.bytes();
             (proof, bytes, None)
         }
         "plonk" => {
-            let proof = client
+            // PLONK: Alternative to Groth16, slightly larger proof (~3KB) and higher gas (~250K)
+            // Still EVM-compatible, but Groth16 is preferred for optimal performance
+            let proof = match client
                 .prove(&pk, &stdin)
                 .plonk()
                 .run()
-                .map_err(|e| {
-                    eprintln!("Proof generation error: {:?}", e);
-                    StatusCode::INTERNAL_SERVER_ERROR
-                })?;
+            {
+                Ok(p) => p,
+                Err(e) => {
+                    let error_msg = format!(
+                        "PLONK proof generation failed: {:?}. \
+                        Note: PLONK requires Docker to be running. \
+                        For local testing without Docker, use 'proof_system: \"core\"' (off-chain only).",
+                        e
+                    );
+                    eprintln!("{}", error_msg);
+                    return Ok(Json(ProofResponse {
+                        success: false,
+                        proof: None,
+                        error: Some(error_msg),
+                    }));
+                }
+            };
             // PLONK proofs support .bytes() for onchain verification
             let bytes = proof.bytes();
             (proof, bytes, None)
         }
         "core" => {
-            // Core proof - NOT compatible with onchain verification
-            // Return error explaining this
-            return Ok(Json(ProofResponse {
-                success: false,
-                proof: None,
-                error: Some(
-                    "Core proofs are not supported for onchain verification. \
-                    Please use 'groth16' or 'plonk' for smart contract integration.".to_string()
-                ),
-            }));
+            // Core proof - works without Docker, but NOT compatible with on-chain verification
+            // Use only for off-chain testing. For production, use "groth16" (recommended) or "plonk"
+            let proof = client
+                .prove(&pk, &stdin)
+                .run()
+                .map_err(|e| {
+                    eprintln!("Core proof generation error: {:?}", e);
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?;
+            // Core proofs don't have .bytes() method, so we serialize the proof
+            // Note: These proofs cannot be verified on-chain (Stylus/Solidity)
+            let bytes = bincode::serialize(&proof).map_err(|e| {
+                eprintln!("Failed to serialize core proof: {:?}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
+            // Core proofs don't expose cycles directly, use None
+            let cycles = None;
+            (proof, bytes, cycles)
         }
         _ => {
             return Ok(Json(ProofResponse {
@@ -271,9 +312,19 @@ async fn generate_proof(
         }
     };
 
-    // Deserialize output
-    let bytes = proof.public_values.as_slice();
-    let output: AgeProofOutput = bincode::deserialize(bytes)
+    // Deserialize output from public values
+    let public_values_bytes = match proof_system {
+        "core" => {
+            // For core proofs, public_values is already serialized
+            proof.public_values.as_slice().to_vec()
+        }
+        _ => {
+            // For Groth16/PLONK, use the public_values directly
+            proof.public_values.as_slice().to_vec()
+        }
+    };
+    
+    let output: AgeProofOutput = bincode::deserialize(&public_values_bytes)
         .map_err(|e| {
             eprintln!("Failed to deserialize output: {:?}", e);
             StatusCode::INTERNAL_SERVER_ERROR
@@ -282,7 +333,7 @@ async fn generate_proof(
     // Create response
     let proof_data = ProofData {
         proof: format!("0x{}", hex::encode(proof_bytes)),
-        public_values: format!("0x{}", hex::encode(bytes)),
+        public_values: format!("0x{}", hex::encode(public_values_bytes)),
         vkey: state.vk.bytes32().to_string(),
         output,
         proof_system: proof_system.to_string(),
