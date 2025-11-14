@@ -11,3 +11,9 @@ der = "0.7"
 x509-parser = "0.16"
 sha2 = "0.10"
 base64 = "0.22"
+# For RSA signature verification
+rsa = { version = "0.9", default-features = false }
+signature = { version = "2.0", default-features = false }
+pkcs1 = { version = "0.7", default-features = false }
+pkcs8 = { version = "0.10", default-features = false }
+num-bigint-dig = { version = "0.8", default-features = false, features = ["std"] }

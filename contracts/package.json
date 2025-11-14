@@ -1,0 +1,20 @@
+{
+  "name": "age-verification-contracts",
+  "version": "0.1.0",
+  "description": "Smart contracts for age verification using SP1 zkVM",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:local": "hardhat run scripts/deploy.js --network localhost",
+    "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia",
+    "verify": "hardhat verify"
+  },
+  "dependencies": {
+    "@succinctlabs/sp1-sdk": "^5.0.8"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "hardhat": "^2.19.0"
+  }
+}
+
